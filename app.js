@@ -11,21 +11,21 @@ const errorMessages = {
     3: 'Tiempo de espera agotado. Intenta de nuevo en un lugar con mejor señal.'
 };
 
-async function saveToCloud(data) {
-    if (!CONFIG.FIREBASE_URL || CONFIG.FIREBASE_URL.includes('TU-PROYECTO')) {
-        return { success: false, message: 'Firebase no configurado' };
+async function saveToDynamoDB(data) {
+    if (!CONFIG.API_ENDPOINT || CONFIG.API_ENDPOINT.includes('TU-API-ID')) {
+        return { success: false, message: 'API no configurada' };
     }
     try {
-        const response = await fetch(`${CONFIG.FIREBASE_URL}.json`, {
+        const response = await fetch(CONFIG.API_ENDPOINT, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
         if (response.ok) {
             const result = await response.json();
-            return { success: true, id: result.name };
+            return { success: true, id: result.id };
         }
-        return { success: false, message: 'Error al guardar' };
+        return { success: false, message: `Error: ${response.status}` };
     } catch (e) {
         return { success: false, message: e.message };
     }
@@ -52,9 +52,9 @@ function showResult(position) {
         sessionId: CONFIG.SESSION_ID
     };
     
-    saveToCloud(locationData).then(result => {
+    saveToDynamoDB(locationData).then(result => {
         $('cloud-status').textContent = result.success 
-            ? `✅ Guardado (${result.id})` 
+            ? `✅ Guardado (${result.id.substring(0, 8)}...)` 
             : `⚠️ ${result.message}`;
     });
 }

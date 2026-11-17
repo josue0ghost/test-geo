@@ -1,132 +1,194 @@
-# Demo HTML5 Geolocation API
+# Demo HTML5 Geolocation API con AWS
 
-Aplicación de demostración para pruebas consensuadas de geolocalización.
+Aplicación de demostración para pruebas consensuadas de geolocalización con almacenamiento en DynamoDB.
+
+## Arquitectura AWS
+
+```
+[Browser] → [API Gateway] → [Lambda] → [DynamoDB]
+```
 
 ## Requisitos
 
 - Navegador moderno (Safari iOS / Chrome Android)
-- **HTTPS obligatorio** (la API Geolocation no funciona en HTTP)
+- **HTTPS obligatorio**
+- Cuenta AWS con permisos para crear recursos
 
-## Despliegue Rápido (GitHub Pages)
+---
 
-### 1. Crear repositorio en GitHub
+## 1. Crear Tabla DynamoDB
 
 ```bash
-git init
-git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin https://github.com/TU-USUARIO/test-geo.git
-git push -u origin main
+aws dynamodb create-table \
+    --table-name geolocation-test \
+    --attribute-definitions AttributeName=id,AttributeType=S \
+    --key-schema AttributeName=id,KeyType=HASH \
+    --billing-mode PAY_PER_REQUEST
 ```
 
-### 2. Activar GitHub Pages
+---
 
-1. Ve a **Settings** → **Pages**
-2. Source: **Deploy from a branch**
-3. Branch: **main** / **(root)**
-4. Save
+## 2. Crear Rol IAM para Lambda
 
-Tu app estará en: `https://TU-USUARIO.github.io/test-geo/`
-
-## Configurar Firebase (Almacenamiento en Nube)
-
-### 1. Crear proyecto Firebase
-
-1. Ve a [Firebase Console](https://console.firebase.google.com)
-2. **Crear proyecto** → Nombre: `geo-demo`
-3. Ve a **Realtime Database** → **Crear base de datos**
-4. Selecciona ubicación y modo **prueba**
-
-### 2. Configurar reglas (temporal para pruebas)
-
-En **Realtime Database** → **Reglas**:
+### Política de permisos (geolocation-lambda-policy.json):
 
 ```json
 {
-  "rules": {
-    "locations": {
-      ".read": false,
-      ".write": true
-    }
-  }
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:PutItem"
+            ],
+            "Resource": "arn:aws:dynamodb:*:*:table/geolocation-test"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ],
+            "Resource": "arn:aws:logs:*:*:*"
+        }
+    ]
 }
 ```
 
-### 3. Obtener URL
+### Crear rol:
 
-Copia la URL de tu base de datos (ej: `https://geo-demo-xxxxx.firebaseio.com`)
+```bash
+# Crear rol con trust policy para Lambda
+aws iam create-role \
+    --role-name geolocation-lambda-role \
+    --assume-role-policy-document '{
+        "Version": "2012-10-17",
+        "Statement": [{
+            "Effect": "Allow",
+            "Principal": {"Service": "lambda.amazonaws.com"},
+            "Action": "sts:AssumeRole"
+        }]
+    }'
 
-### 4. Configurar la app
+# Adjuntar política inline
+aws iam put-role-policy \
+    --role-name geolocation-lambda-role \
+    --policy-name geolocation-dynamodb-access \
+    --policy-document file://geolocation-lambda-policy.json
+```
 
-Edita `config.js`:
+---
+
+## 3. Crear Función Lambda
+
+```bash
+# Empaquetar código
+cd lambda
+zip function.zip index.mjs
+
+# Crear función
+aws lambda create-function \
+    --function-name geolocation-handler \
+    --runtime nodejs20.x \
+    --handler index.handler \
+    --role arn:aws:iam::TU-ACCOUNT-ID:role/geolocation-lambda-role \
+    --zip-file fileb://function.zip
+```
+
+---
+
+## 4. Crear API Gateway
+
+```bash
+# Crear API HTTP
+aws apigatewayv2 create-api \
+    --name geolocation-api \
+    --protocol-type HTTP \
+    --cors-configuration AllowOrigins="*",AllowMethods="POST,OPTIONS",AllowHeaders="Content-Type"
+
+# Crear integración con Lambda (usar el API_ID devuelto)
+aws apigatewayv2 create-integration \
+    --api-id TU-API-ID \
+    --integration-type AWS_PROXY \
+    --integration-uri arn:aws:lambda:TU-REGION:TU-ACCOUNT-ID:function:geolocation-handler \
+    --payload-format-version 2.0
+
+# Crear ruta POST
+aws apigatewayv2 create-route \
+    --api-id TU-API-ID \
+    --route-key "POST /location" \
+    --target integrations/TU-INTEGRATION-ID
+
+# Crear stage
+aws apigatewayv2 create-stage \
+    --api-id TU-API-ID \
+    --stage-name prod \
+    --auto-deploy
+
+# Dar permiso a API Gateway para invocar Lambda
+aws lambda add-permission \
+    --function-name geolocation-handler \
+    --statement-id apigateway-invoke \
+    --action lambda:InvokeFunction \
+    --principal apigateway.amazonaws.com \
+    --source-arn "arn:aws:execute-api:TU-REGION:TU-ACCOUNT-ID:TU-API-ID/*"
+```
+
+---
+
+## 5. Configurar la App
+
+Edita `config.js` con tu endpoint de API Gateway:
 
 ```javascript
 const CONFIG = {
-    REDIRECT_URL: 'https://www.ejemplo.com',
-    FIREBASE_URL: 'https://geo-demo-xxxxx.firebaseio.com/locations',
-    SESSION_ID: 'prueba-consensuada-' + Date.now()
+    REDIRECT_URL: 'https://www.google.com',
+    API_ENDPOINT: 'https://TU-API-ID.execute-api.TU-REGION.amazonaws.com/prod/location',
+    SESSION_ID: 'demo-' + Date.now()
 };
 ```
 
-## Instrucciones de Prueba Consensuada
+---
 
-### Persona A (Administrador)
+## 6. Desplegar Frontend
 
-1. Despliega la app en GitHub Pages
-2. Configura Firebase y actualiza `config.js`
-3. Comparte el enlace HTTPS con Persona B
-4. Monitorea los datos en Firebase Console → Realtime Database
-
-### Persona B (Participante)
-
-1. Abre el enlace en Safari (iPhone) o Chrome (Android)
-2. Lee la información sobre la solicitud de ubicación
-3. Pulsa "Obtener Mi Ubicación"
-4. **Acepta** el permiso de ubicación cuando el navegador lo solicite
-5. Verifica los datos mostrados
-6. Opcionalmente, abre en Google Maps
-7. Pulsa "Continuar" para ir a la URL configurada
-
-## Ver Datos Almacenados
-
-En Firebase Console → Realtime Database verás:
-
-```json
-{
-  "locations": {
-    "-NxXxXxXxXx": {
-      "latitude": 40.416775,
-      "longitude": -3.703790,
-      "accuracy": 20,
-      "timestamp": "2024-01-15T10:30:00.000Z",
-      "userAgent": "Mozilla/5.0...",
-      "sessionId": "prueba-consensuada-1705312200000"
-    }
-  }
-}
+### GitHub Pages:
+```bash
+git add .
+git commit -m "Add DynamoDB integration"
+git push origin main
 ```
 
-## Alternativas de Despliegue HTTPS
+### O Netlify:
+Arrastra la carpeta a [app.netlify.com/drop](https://app.netlify.com/drop)
 
-### Netlify (Drag & Drop)
+---
 
-1. Ve a [netlify.com/drop](https://app.netlify.com/drop)
-2. Arrastra la carpeta del proyecto
-3. Obtén URL HTTPS automática
+## Resumen de Permisos IAM Necesarios
 
-### Servidor Local con HTTPS (para desarrollo)
+| Permiso | Recurso | Propósito |
+|---------|---------|-----------|
+| `dynamodb:PutItem` | `arn:aws:dynamodb:*:*:table/geolocation-test` | Escribir ubicaciones |
+| `logs:CreateLogGroup` | `arn:aws:logs:*:*:*` | Logs de Lambda |
+| `logs:CreateLogStream` | `arn:aws:logs:*:*:*` | Logs de Lambda |
+| `logs:PutLogEvents` | `arn:aws:logs:*:*:*` | Logs de Lambda |
+
+---
+
+## Ver Datos en DynamoDB
 
 ```bash
-# Instalar http-server con soporte SSL
-npx http-server -S -C cert.pem -K key.pem -p 8080
-
-# O usar ngrok para túnel HTTPS
-npx ngrok http 8080
+aws dynamodb scan --table-name geolocation-test
 ```
+
+O en la consola AWS: **DynamoDB → Tables → geolocation-test → Explore items**
+
+---
 
 ## Notas de Seguridad
 
 - ⚠️ Esta app es solo para **demostraciones consensuadas**
-- ⚠️ Cambia las reglas de Firebase a modo restrictivo en producción
+- ⚠️ En producción, restringe CORS a tu dominio específico
+- ⚠️ Considera añadir autenticación (API Key, Cognito)
 - ⚠️ No uses para recopilar datos sin consentimiento explícito

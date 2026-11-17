@@ -5,10 +5,9 @@ const CONFIG = {
     // URL a la que redirigir después de mostrar resultados
     REDIRECT_URL: 'https://www.google.com',
     
-    // Firebase Realtime Database URL (crear en https://console.firebase.google.com)
-    // Formato: https://tu-proyecto.firebaseio.com
-    FIREBASE_URL: 'https://TU-PROYECTO.firebaseio.com/locations',
+    // API Gateway endpoint (crear con Lambda + DynamoDB)
+    API_ENDPOINT: 'https://qa4qc0ffld.execute-api.us-east-2.amazonaws.com/prod/location',
     
-    // Identificador de sesión (opcional)
+    // Identificador de sesión
     SESSION_ID: 'demo-' + Date.now()
 };
