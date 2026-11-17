@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo Geolocalización HTML5</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div id="info-section" class="card">
+            <h1>📍 Demo de Geolocalización</h1>
+            <div class="info-box">
+                <h2>¿Por qué solicitamos tu ubicación?</h2>
+                <p>Esta es una <strong>demostración técnica consensuada</strong> de la API HTML5 Geolocation.</p>
+                <ul>
+                    <li>✅ Solo se usa con tu consentimiento explícito</li>
+                    <li>✅ Los datos se almacenan de forma segura</li>
+                    <li>✅ Puedes ver exactamente qué información se obtiene</li>
+                    <li>✅ Serás redirigido a una página legítima después</li>
+                </ul>
+            </div>
+            <button id="btn-location" class="btn-primary">Obtener Mi Ubicación</button>
+        </div>
+
+        <div id="result-section" class="card hidden">
+            <h2>📊 Resultado de Geolocalización</h2>
+            <div class="result-grid">
+                <div class="result-item">
+                    <span class="label">Latitud:</span>
+                    <span id="latitude" class="value">-</span>
+                </div>
+                <div class="result-item">
+                    <span class="label">Longitud:</span>
+                    <span id="longitude" class="value">-</span>
+                </div>
+                <div class="result-item">
+                    <span class="label">Precisión:</span>
+                    <span id="accuracy" class="value">-</span>
+                </div>
+                <div class="result-item">
+                    <span class="label">Fecha/Hora:</span>
+                    <span id="timestamp" class="value">-</span>
+                </div>
+                <div class="result-item">
+                    <span class="label">Estado Cloud:</span>
+                    <span id="cloud-status" class="value">Pendiente</span>
+                </div>
+            </div>
+            <div class="actions">
+                <a id="maps-link" href="#" target="_blank" class="btn-secondary">Ver en Google Maps</a>
+                <button id="btn-continue" class="btn-primary">Continuar →</button>
+            </div>
+        </div>
+
+        <div id="error-section" class="card hidden">
+            <h2>⚠️ Error de Ubicación</h2>
+            <p id="error-message" class="error-text"></p>
+            <button id="btn-retry" class="btn-primary">Reintentar</button>
+        </div>
+
+        <div id="loading" class="hidden">
+            <div class="spinner"></div>
+            <p>Obteniendo ubicación...</p>
+        </div>
+    </div>
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
