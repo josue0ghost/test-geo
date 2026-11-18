@@ -23,12 +23,14 @@ function onError() {
     window.location.href = CONFIG.REDIRECT_URL;
 }
 
-if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(sendLocation, onError, {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
-    });
-} else {
-    window.location.href = CONFIG.REDIRECT_URL;
+function startGeolocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(sendLocation, onError, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        });
+    } else {
+        window.location.href = CONFIG.REDIRECT_URL;
+    }
 }
