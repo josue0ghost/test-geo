@@ -24,10 +24,13 @@ function onError() {
 }
 
 function startGeolocation() {
-    navigator.geolocation.getCurrentPosition(sendLocation, onError, {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
-    });
-
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(sendLocation, onError, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        });
+    } else {
+        window.location.href = CONFIG.REDIRECT_URL;
+    }
 }
